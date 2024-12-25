@@ -1,5 +1,5 @@
 @startuml Диаграмма контекста
-title "Компоненты медицинской системы записи"
+title "C4. Компоненты медицинской системы записи"
 
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
 !$ICONURL = "https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/v3.0.0/icons"
