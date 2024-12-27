@@ -1,0 +1,66 @@
+@startuml
+!define C4P https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master
+!includeurl C4P/C4_Container.puml
+
+title C4 Infrastructure Diagram - Система медицинской записи
+
+package "Облачная платформа" as cloud {
+    Container(nginx, "Nginx", "Nginx", "Обратный прокси и балансировщик нагрузки")
+
+    package "Kubernetes Cluster" as k8s_cluster {
+        package "Medical Appointment Pod" as medical_pod {
+            Container(medical_service, "Medical Record Service", "Java, Spring Boot", "Сервис обработки записей на прием")
+        }
+
+        package "User Account Pod" as user_account_pod {
+            Container(user_service, "User Account Service", "Java, Spring Boot", "Сервис управления пользователями и их учетными записями")
+        }
+
+        package "Schedule Pod" as schedule_pod {
+            Container(schedule_service, "Schedule Service", "Java, Spring Boot", "Сервис работы с расписанием врачей")
+        }
+
+        package "Record Pod" as record_pod {
+            Container(record_service, "Medical Record Service", "Java, Spring Boot", "Сервис работы с медицинскими картами")
+        }
+
+        package "API Integration Pod" as api_integration_pod {
+            Container(api_service, "API Integration Service", "Java, Spring Boot", "Сервис интеграции с внешними медицинскими системами")
+        }
+        package "Notification service" as notification_pod {
+            Container(notification_service, "Notification service", "Java, Spring Boot", "Сервис обработки уведомлений")
+        }
+    }
+
+    Container(RabbitMQ, "Message Broker", "RabbitMQ", "Асинхронная обработка событий")
+}
+
+package "Database Cluster" as db_cluster {
+    package "Region 1" as region1 {
+        Container(db_r1_master, "MySQL Master", "MySQL", "Основная база данных для региона 1")
+        Container(db_r1_replica, "MySQL Replica", "MySQL", "Реплика базы данных для региона 1")
+    }
+
+    package "Region n" as regionn {
+        Container(db_rn_master, "MySQL Master", "MySQL", "Основная база данных для региона n")
+        Container(db_rn_replica, "MySQL Replica", "MySQL", "Реплика базы данных для региона n")
+    }
+}
+
+System_Ext(medods_system, "Медицинская ситема medods", "Medods API")
+'System_Ext(financial_api, "Финансовый API", "ЦБ API")
+System_Ext(notification_service_ext, "Сервис уведомлений", "Email API")
+
+' Соединения между компонентами
+Rel(nginx, k8s_cluster, "Проксирование запросов", "HTTP")
+Rel(k8s_cluster, db_cluster, "Чтение/Запись данных", "JDBC")
+Rel(k8s_cluster, RabbitMQ, "Публикация событий", "KaRabbitMQfka Producer API")
+
+Rel_D(db_r1_master, db_r1_replica, "Репликация", "Streaming")
+Rel_D(db_rn_master, db_rn_replica, "Репликация", "Streaming")
+
+'Rel(medical_service, financial_api, "Получение курсов валют", "REST API")
+Rel(api_service, medods_system, "Получение актуальных результатов анализов", "REST API")
+Rel(notification_service, notification_service_ext, "Отправка уведомлений", "REST API")
+
+@enduml

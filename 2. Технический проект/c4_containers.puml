@@ -1,0 +1,70 @@
+@startuml
+title "C4. Контейнеры медицинской системы записи"
+
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+!$ICONURL = "https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/v3.0.0/icons"
+!include $ICONURL/common.puml
+!include $ICONURL/devicons/react.puml
+!include $ICONURL/devicons2/postgresql.puml
+
+' Персоны
+Person(patient, "Пациент", "Запись на прием к врачу, просмотр своей медицинской карты")
+Person(doctor, "Врач", "Просмотр расписания за день, регистрация проведенных приемов")
+Person(admin, "Администратор", "Управление учетными записями пользователей и настройка системы")
+
+
+' Система
+System_Boundary(appBoundary, "Медицинская система записи") {
+    Container(webApp, "Веб-приложение", "React", "Интерфейс для записи к врачу и просмотра медицинской карты, просмотра расписания врача")
+    Container(userAccountService, "Сервис пользователей и аккаунтов", "Java", "Управление учетными записями пользователей и их аккаунтами")
+    Container(scheduleService, "Сервис работы с расписанием врачей", "Java", "Управление расписанием врачей")
+    Container(medicalRecordService, "Сервис работы с медицинскими картами", "Java", "Управление медицинскими картами и их данными")
+    Container(medicalService, "Сервис медицинской записи", "Java", "Обработка запросов на запись к врачу с использованием микросервисной архитектуры")
+    Container(medodsService, "Сервис интеграции medods", "Java", "Интеграция с API medods для получения результатов анализов пациентов")
+
+    Container(notificationService, "Сервис обработки уведомлений", "Обработка уведомлений")
+    Container(eventBus, "Событийная шина", "RabbitMQ", "Обработка и маршрутизация событий между компонентами системы")
+
+    ContainerDb(db_users, "db users sheme", "MySQL", "Хранение данных о пользователях")
+    ContainerDb(db_schedule, "db schedule sheme", "MySQL", "Хранение данных о расписании врачей")
+    ContainerDb(db_medical_record, "db medical record sheme", "MySQL", "Хранение данных о медицинских картах")
+    ContainerDb(db_result, "db result sheme", "MySQL", "Хранение данных о результатах анализов")
+    ContainerDb(db_appointment, "db appointment sheme", "MySQL", "Хранение данных о записях на прием")
+}
+
+' Внешние системы
+System_Ext(medodsAPI, "Сервис medods", "Получение результатов анализов пациентов")
+System_Ext(notificationServiceExt, "Сервис уведомлений", "Отправка уведомлений пользователям")
+
+' Расположение элементов
+patient ----> webApp : "Использует\n[HTTP/TCP]"
+doctor ----> webApp : "Использует\n[HTTP/TCP]"
+admin ----> webApp : "Использует\n[HTTP/TCP]"
+
+webApp --> userAccountService : "API вызовы\n[HTTPS/REST]"
+webApp --> medicalService : "API вызовы\n[HTTPS/REST]"
+webApp --> medicalRecordService : "API вызовы\n[HTTPS/REST]"
+webApp --> scheduleService : "API вызовы\n[HTTPS/REST]"
+webApp --> medodsService : "API вызовы\n[HTTPS/REST]"
+webApp --> notificationService : "API вызовы\n[HTTPS/REST]"
+
+userAccountService --> db_users : "Чтение/запись\n[SQL]"
+medicalService --> db_appointment : "Чтение/запись\n[SQL]"
+scheduleService --> db_schedule : "Чтение/запись\n[SQL]"
+medicalRecordService --> db_medical_record : "Чтение/запись\n[SQL]"
+medodsService --> db_result : "Чтение/запись\n[SQL]"
+
+
+medodsService ----> medodsAPI : "Запрос актуальных результатов анализов пациента\n[HTTPS/REST]"
+
+' Связь с событийной шиной
+userAccountService --> eventBus : "Публикация событий: Пользователь зарегистрирован, данные изменены"
+scheduleService --> eventBus : "Публикация события: Расписание создано, изменено, удалено"
+medicalRecordService --> eventBus : "Запись добавлена, данные изменены, запись удалена"
+medicalService --> eventBus : "Запись на прием создана, отменена"
+medodsService --> eventBus : "Публикация события: Результаты пациента обновлены"
+
+' Реакция на события
+notificationService ---> eventBus : "Отправка уведомления"
+notificationService ----> notificationServiceExt : "Отправка уведомления"
+@enduml
